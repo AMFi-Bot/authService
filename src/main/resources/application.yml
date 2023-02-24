@@ -1,1 +1,4 @@
-
+spring:
+  data:
+    mongodb:
+      uri: ${AUTH_SERVICE_MONGO_URI}
