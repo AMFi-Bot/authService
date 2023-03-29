@@ -1,4 +1,4 @@
-package org.amfibot.auth;
+package org.amfibot.auth
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -12,8 +12,7 @@ class AuthApplication {
 
     @GetMapping("/")
     fun root(): String {
-        throw Exception("qwertyuy")
-//		return "Hello, authentication service!";
+        return "Welcome to amfi bot authorization service."
     }
 
 }
