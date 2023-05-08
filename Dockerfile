@@ -7,7 +7,7 @@ COPY mvnw pom.xml ./
 RUN ./mvnw dependency:resolve
 RUN ./mvnw dependency:resolve-plugins
 COPY src ./src
-
+RUN ./mvnw compile
 
 
 FROM base as development

@@ -2,40 +2,36 @@ package org.amfibot.auth.config
 
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
-import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer
-import org.springframework.security.config.annotation.web.configurers.RequestCacheConfigurer
+import org.springframework.security.config.annotation.web.invoke
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.crypto.password.NoOpPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.provisioning.InMemoryUserDetailsManager
 import org.springframework.security.web.SecurityFilterChain
-import org.springframework.security.web.savedrequest.NullRequestCache
 
-@EnableWebSecurity
+
 @Configuration
+@EnableWebSecurity
 class DefaultSecurityConfig {
     @Bean
-    @Throws(Exception::class)
     fun defaultSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
-        http
-            .authorizeHttpRequests(
-                Customizer { authorize: AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry ->
-                    authorize
-                        .requestMatchers("/.~~spring-boot!~/**").permitAll()
-                        .anyRequest().authenticated()
-                }
-            )
-            .formLogin(Customizer.withDefaults())
-            .requestCache { cache: RequestCacheConfigurer<HttpSecurity?> ->
-                cache.requestCache(
-                    NullRequestCache()
-                )
+        http.invoke {
+            authorizeRequests {
+                authorize("/.~~spring-boot!~/**", permitAll)
+                authorize("/error", permitAll)
+                authorize(anyRequest, authenticated)
             }
-        //.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+            oauth2Login {
+                redirectionEndpoint {
+                    baseUri = "/oauth2/callback/*"
+                }
+            }
+        }
+
 
         return http.build()
     }
@@ -51,7 +47,5 @@ class DefaultSecurityConfig {
     }
 
     @Bean
-    fun passwordEncoder(): PasswordEncoder {
-        return NoOpPasswordEncoder.getInstance()
-    }
+    fun passwordEncoder(): PasswordEncoder = NoOpPasswordEncoder.getInstance()
 }

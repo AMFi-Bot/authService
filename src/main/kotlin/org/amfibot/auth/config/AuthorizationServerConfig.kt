@@ -9,9 +9,8 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
-import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
-import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer
+import org.springframework.security.config.annotation.web.invoke
 import org.springframework.security.oauth2.core.AuthorizationGrantType
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod
 import org.springframework.security.oauth2.core.oidc.OidcScopes
@@ -28,19 +27,23 @@ import org.springframework.security.web.SecurityFilterChain
 import java.time.Duration
 import java.util.*
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 class AuthorizationServerConfig {
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
-    @Throws(
-        Exception::class
-    )
     fun authorizationServerSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http)
+
         http.getConfigurer(OAuth2AuthorizationServerConfigurer::class.java)
-            .oidc(Customizer.withDefaults()) // Enable OpenID Connect 1.0
-        http // Accept access tokens for User Info and/or Client Registration
-            .oauth2ResourceServer { obj: OAuth2ResourceServerConfigurer<HttpSecurity?> -> obj.jwt() }
+            .oidc {} // Enable OpenID Connect 1.0
+
+        // Accept access tokens for User Info and/or Client Registration
+        http.invoke {
+            oauth2ResourceServer {
+                jwt { }
+            }
+        }
+
         return http.build()
     }
 
@@ -66,7 +69,7 @@ class AuthorizationServerConfig {
     fun jwkSource(): JWKSource<SecurityContext> {
         val rsaKey = generateRsa()
         val jwkSet = JWKSet(rsaKey)
-        return JWKSource { jwkSelector: JWKSelector, securityContext: SecurityContext? -> jwkSelector.select(jwkSet) }
+        return JWKSource { jwkSelector: JWKSelector, _ -> jwkSelector.select(jwkSet) }
     }
 
     @Bean
