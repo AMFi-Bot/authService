@@ -5,6 +5,8 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.annotation.web.invoke
+import org.springframework.security.core.GrantedAuthority
+import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper
 import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.crypto.password.NoOpPasswordEncoder
@@ -29,12 +31,34 @@ class DefaultSecurityConfig {
                 redirectionEndpoint {
                     baseUri = "/oauth2/callback/*"
                 }
+                userInfoEndpoint {
+                    userAuthoritiesMapper = userAuthoritiesMapper()
+                }
             }
         }
 
 
         return http.build()
     }
+
+
+    /**
+     *
+     * Adds client to user authorities
+     *
+     * TODO: Remove this method when find solution for mapping user authorities on exchange user info step
+     *
+     */
+    private fun userAuthoritiesMapper(): GrantedAuthoritiesMapper =
+        GrantedAuthoritiesMapper { authorities: Collection<GrantedAuthority> ->
+            val mappedAuthorities = authorities.toMutableList()
+
+            // Adds OAUTH2_CLIENT_DISCORD to all users logged in through OAuth2
+            // Here is only one client, so it is allowed
+            mappedAuthorities.add(GrantedAuthority { "OAUTH2_CLIENT_DISCORD" })
+
+            mappedAuthorities
+        }
 
     @Bean
     fun users(): UserDetailsService {
