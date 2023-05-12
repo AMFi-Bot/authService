@@ -7,11 +7,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.invoke
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper
-import org.springframework.security.core.userdetails.User
-import org.springframework.security.core.userdetails.UserDetailsService
-import org.springframework.security.crypto.password.NoOpPasswordEncoder
-import org.springframework.security.crypto.password.PasswordEncoder
-import org.springframework.security.provisioning.InMemoryUserDetailsManager
 import org.springframework.security.web.SecurityFilterChain
 
 
@@ -59,17 +54,4 @@ class DefaultSecurityConfig {
 
             mappedAuthorities
         }
-
-    @Bean
-    fun users(): UserDetailsService {
-        val user = User.withUsername("bill")
-            .password("12345")
-            .roles("USER")
-            .authorities("read")
-            .build()
-        return InMemoryUserDetailsManager(user)
-    }
-
-    @Bean
-    fun passwordEncoder(): PasswordEncoder = NoOpPasswordEncoder.getInstance()
 }
