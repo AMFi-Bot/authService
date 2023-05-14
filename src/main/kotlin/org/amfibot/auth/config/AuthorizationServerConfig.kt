@@ -104,7 +104,8 @@ class AuthorizationServerConfig {
             .clientSettings(ClientSettings.builder().requireProofKey(true).build())
             .tokenSettings(TokenSettings.builder().accessTokenTimeToLive(Duration.ofDays(1)).build())
             .scope(OidcScopes.OPENID)
-            .redirectUri("https://127.0.0.1/oa2client/authorized")
+            .redirectUri("http://localhost:3000/login_callback")
+	    .redirectUri("http://localhost/login_callback")
             .build()
         return InMemoryRegisteredClientRepository(frontendClient)
     }
