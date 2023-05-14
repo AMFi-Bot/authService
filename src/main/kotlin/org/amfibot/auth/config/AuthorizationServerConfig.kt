@@ -48,6 +48,7 @@ class AuthorizationServerConfig {
             oauth2ResourceServer {
                 jwt { }
             }
+	    formLogin { }
         }
 
         return http.build()
