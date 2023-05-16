@@ -48,7 +48,10 @@ class AuthorizationServerConfig {
             oauth2ResourceServer {
                 jwt { }
             }
-	    formLogin { }
+
+            formLogin { }
+
+            cors { configurationSource = DefaultSecurityConfig.corsConfigurationSource() }
         }
 
         return http.build()
@@ -106,7 +109,7 @@ class AuthorizationServerConfig {
             .tokenSettings(TokenSettings.builder().accessTokenTimeToLive(Duration.ofDays(1)).build())
             .scope(OidcScopes.OPENID)
             .redirectUri("http://localhost:3000/login_callback")
-	    .redirectUri("http://localhost/login_callback")
+            .redirectUri("http://localhost/login_callback")
             .build()
         return InMemoryRegisteredClientRepository(frontendClient)
     }
