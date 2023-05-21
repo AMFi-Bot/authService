@@ -23,6 +23,7 @@ class DefaultSecurityConfig {
             authorizeRequests {
                 authorize("/.~~spring-boot!~/**", permitAll)
                 authorize("/error", permitAll)
+		authorize("/.well-known/**", permitAll)
                 authorize(anyRequest, authenticated)
             }
 
