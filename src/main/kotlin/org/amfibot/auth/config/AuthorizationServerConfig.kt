@@ -4,7 +4,10 @@ import com.nimbusds.jose.jwk.JWKSelector
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.source.JWKSource
 import com.nimbusds.jose.proc.SecurityContext
+import java.time.Duration
+import java.util.*
 import org.amfibot.auth.jose.Jwks.generateRsa
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.Ordered
@@ -29,27 +32,27 @@ import org.springframework.security.oauth2.server.authorization.settings.TokenSe
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer
 import org.springframework.security.web.SecurityFilterChain
-import java.time.Duration
-import java.util.*
 
-
+/**
+ *
+ * @param issuer The URL the Authorization Server uses as its Issuer Identifier.
+ */
 @Configuration(proxyBeanMethods = false)
-class AuthorizationServerConfig {
+class AuthorizationServerConfig(@Value("\${ISSUER}") private val issuer: String) {
+
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     fun authorizationServerSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http)
 
-        http.getConfigurer(OAuth2AuthorizationServerConfigurer::class.java)
-            .oidc {} // Enable OpenID Connect 1.0
+        http.getConfigurer(OAuth2AuthorizationServerConfigurer::class.java).oidc {
+        } // Enable OpenID Connect 1.0
 
         // Accept access tokens for User Info and/or Client Registration
         http.invoke {
-            oauth2ResourceServer {
-                jwt { }
-            }
+            oauth2ResourceServer { jwt {} }
 
-            formLogin { }
+            formLogin {}
 
             cors { configurationSource = DefaultSecurityConfig.corsConfigurationSource() }
         }
@@ -62,38 +65,35 @@ class AuthorizationServerConfig {
      * Customizes tokens produced by authorization server
      *
      * @param authorizedClientService A service of OAuth2 LOGIN clients
-     *
      */
     @Bean
-    fun tokenCustomizer(authorizedClientService: OAuth2AuthorizedClientService): OAuth2TokenCustomizer<JwtEncodingContext> =
-        OAuth2TokenCustomizer { context ->
-            if (context.tokenType == OAuth2TokenType.ACCESS_TOKEN) {
-                val claims = context.claims
+    fun tokenCustomizer(
+            authorizedClientService: OAuth2AuthorizedClientService
+    ): OAuth2TokenCustomizer<JwtEncodingContext> = OAuth2TokenCustomizer { context ->
+        if (context.tokenType == OAuth2TokenType.ACCESS_TOKEN) {
+            val claims = context.claims
 
-                val principal = context.getPrincipal<Authentication>()
+            val principal = context.getPrincipal<Authentication>()
 
+            // Process user authorized with discord
+            if (principal.authorities.any { it.authority == "OAUTH2_CLIENT_DISCORD" }) {
+                claims.claim("userType", "discord")
 
-                // Process user authorized with discord
-                if (principal.authorities.any { it.authority == "OAUTH2_CLIENT_DISCORD" }) {
-                    claims.claim("userType", "discord")
-
-
-                    val authorizedClient =
+                val authorizedClient =
                         authorizedClientService.loadAuthorizedClient<OAuth2AuthorizedClient>(
-                            "discord",
-                            principal.name
+                                "discord",
+                                principal.name
                         )
 
-                    val discordAccessToken = authorizedClient.accessToken
+                val discordAccessToken = authorizedClient.accessToken
 
-                    // Add discord user access token as claim
-                    // Needed for clients to make api calls directly to discord
-                    // for example, /users/@me, /users/@me/guilds, etc.
-                    claims.claim("discordAccessToken", discordAccessToken.tokenValue)
-                }
+                // Add discord user access token as claim
+                // Needed for clients to make api calls directly to discord
+                // for example, /users/@me, /users/@me/guilds, etc.
+                claims.claim("discordAccessToken", discordAccessToken.tokenValue)
             }
         }
-
+    }
 
     @Bean
     fun registeredClientRepository(): RegisteredClientRepository {
@@ -101,16 +101,21 @@ class AuthorizationServerConfig {
         // Base frontend client for amfi bot
         // It is a public client, so
         // No client_secret. Proof Key for Code Exchange (PKCE) required
-        val frontendClient = RegisteredClient.withId(UUID.randomUUID().toString())
-            .clientId("amfiFrontend")
-            .clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
-            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-            .clientSettings(ClientSettings.builder().requireProofKey(true).build())
-            .tokenSettings(TokenSettings.builder().accessTokenTimeToLive(Duration.ofDays(1)).build())
-            .scope(OidcScopes.OPENID)
-            .redirectUri("http://localhost:3000/login_callback")
-            .redirectUri("http://localhost/login_callback")
-            .build()
+        val frontendClient =
+                RegisteredClient.withId(UUID.randomUUID().toString())
+                        .clientId("amfiFrontend")
+                        .clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
+                        .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                        .clientSettings(ClientSettings.builder().requireProofKey(true).build())
+                        .tokenSettings(
+                                TokenSettings.builder()
+                                        .accessTokenTimeToLive(Duration.ofDays(1))
+                                        .build()
+                        )
+                        .scope(OidcScopes.OPENID)
+                        .redirectUri("http://localhost:3000/login_callback")
+                        .redirectUri("http://localhost/login_callback")
+                        .build()
         return InMemoryRegisteredClientRepository(frontendClient)
     }
 
@@ -128,6 +133,9 @@ class AuthorizationServerConfig {
 
     @Bean
     fun authorizationServerSettings(): AuthorizationServerSettings {
-        return AuthorizationServerSettings.builder().build()
+        return AuthorizationServerSettings.builder()
+                // The URL the Authorization Server uses as its Issuer Identifier.
+                .issuer(issuer)
+                .build()
     }
 }
