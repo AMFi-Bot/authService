@@ -21,5 +21,10 @@ class AuthApplication {
 }
 
 fun main(args: Array<String>) {
+    // Disables TomcatURLStreamHandlerFactory
+    // to bypass the factory is already defined exception
+    // when auto reloading the application with spring DevTools remote
+    TomcatURLStreamHandlerFactory.disable()
+
     runApplication<AuthApplication>(*args)
 }

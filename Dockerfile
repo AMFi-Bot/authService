@@ -1,27 +1,19 @@
-FROM eclipse-temurin:17-jdk-jammy as base
+FROM eclipse-temurin:17-jdk-alpine as build                                                                                                                                                           
+WORKDIR /app                                                                                                                                                                                          
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
+COPY src src
 
-WORKDIR /app
+RUN --mount=type=cache,target=/root/.m2 ./mvnw package -DskipTests
+RUN cp target/*.jar /app.jar
 
-COPY .mvn/ .mvn
-COPY mvnw pom.xml ./
-RUN ./mvnw dependency:resolve
-RUN ./mvnw dependency:resolve-plugins
-COPY src ./src
-
-
-FROM base as development
-CMD ["./mvnw", "spring-boot:run", "-Dspring-boot.run.jvmArguments='-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000'"]
-
-
-
-FROM base as build
-RUN ./mvnw package
-
-
-
-FROM eclipse-temurin:17-jre-alpine as production
 EXPOSE 8080
 
-COPY --from=build /app/target/*.jar /app.jar
+FROM eclipse-temurin:17-jdk-alpine as development
+COPY --from=build /app.jar /app.jar
+ENTRYPOINT ["java","-Dspring-boot.run.jvmArguments='-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000'","-Dspring.profiles.active=dev","-jar","/app.jar"]
 
-CMD ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "/app.jar"]
+FROM eclipse-temurin:17-jdk-alpine as production
+COPY --from=build /app.jar /app.jar
+ENTRYPOINT ["java","-Djava.security.egd=file:/dev/./urandom","-Dspring.profiles.active=prod","-jar","/app.jar"]
