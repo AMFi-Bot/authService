@@ -4,5 +4,3 @@ spring:
       secret: ${DEVTOOLS_REMOTE_SECRET}
     restart:
       enabled: true
-      poll-interval: 3s
-      quiet-period: 2s
